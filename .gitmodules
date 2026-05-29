@@ -1,0 +1,6 @@
+[submodule "primrec-frontend"]
+	path = primrec-frontend
+	url = git@github.com:FormallyVerifiedPrimrec/primrec-frontend.git
+[submodule "primrec-backend"]
+	path = primrec-backend
+	url = git@github.com:FormallyVerifiedPrimrec/primrec-backend.git
