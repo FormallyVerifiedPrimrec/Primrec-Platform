@@ -1,6 +1,7 @@
 services:
   frontend:
-    image: ghcr.io/formallyverifiedprimrec/primrec-platform/frontend:latest
+    build:
+      context: ./primrec-frontend
     environment:
       DOMAIN: ${DOMAIN:-:80}
       VITE_SUPABASE_URL: ${SUPABASE_URL}
@@ -16,7 +17,9 @@ services:
       - primrec-net
 
   challenges-backend:
-    image: ghcr.io/formallyverifiedprimrec/primrec-platform/challenges-backend:latest
+    build:
+      context: ./primrec-backend
+      dockerfile: Dockerfile.ChallengesBackend
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       SUPABASE_URL: ${SUPABASE_URL}
@@ -25,7 +28,9 @@ services:
       - primrec-net
 
   solver-backend:
-    image: ghcr.io/formallyverifiedprimrec/primrec-platform/solver-backend:latest
+    build:
+      context: ./primrec-backend
+      dockerfile: Dockerfile.SolverBackend
     environment:
       ASPNETCORE_ENVIRONMENT: Production
     networks:
