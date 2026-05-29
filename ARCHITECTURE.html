@@ -62,7 +62,7 @@
   .badge-react { background: rgba(88,166,255,.15); color: var(--accent); }
   .badge-dotnet { background: rgba(188,140,255,.15); color: var(--purple); }
   .badge-pg { background: rgba(63,185,80,.15); color: var(--accent2); }
-  .badge-nginx { background: rgba(240,136,62,.15); color: var(--orange); }
+  .badge-caddy { background: rgba(63,185,80,.15); color: var(--accent2); }
   .badge-docker { background: rgba(88,166,255,.15); color: var(--accent); }
   .badge-ts { background: rgba(49,120,198,.2); color: #3178c6; }
   .card-grid {
@@ -114,7 +114,7 @@
   <span class="badge badge-ts">TypeScript</span>
   <span class="badge badge-dotnet">.NET 8</span>
   <span class="badge badge-pg">PostgreSQL</span>
-  <span class="badge badge-nginx">Nginx</span>
+  <span class="badge badge-caddy">Caddy</span>
   <span class="badge badge-docker">Docker</span>
 </p>
 
@@ -127,7 +127,7 @@ graph TB
     end
 
     subgraph Docker["Docker Compose"]
-        NGINX["Nginx :80<br/>SPA fallback + reverse proxy"]
+        NGINX["Caddy :80/443<br/>SPA fallback + reverse proxy"]
         CB["ChallengesBackend<br/>.NET 8 Minimal API<br/>:8080 (internal)"]
         SB["SolverBackend<br/>.NET 8<br/>:8080 (internal)"]
     end
@@ -153,7 +153,7 @@ graph TB
     <span class="flow-num">1</span>
     <div>
       <strong>Browser loads SPA</strong><br>
-      <small class="text-muted">Nginx serves <code>index.html</code>. React Router handles client-side routing.</small>
+      <small class="text-muted">Caddy serves <code>index.html</code>. React Router handles client-side routing. TLS via automatic Let's Encrypt.</small>
     </div>
   </div>
   <div class="flow-step">
@@ -167,7 +167,7 @@ graph TB
     <span class="flow-num">3</span>
     <div>
       <strong>API calls</strong><br>
-      <small class="text-muted">Frontend <code>challengesApi.ts</code> injects JWT via <code>Authorization: Bearer</code>. Nginx proxies <code>/api/*</code> to ChallengesBackend.</small>
+      <small class="text-muted">Frontend <code>challengesApi.ts</code> injects JWT via <code>Authorization: Bearer</code>. Caddy proxies <code>/api/*</code> and <code>/solver/*</code> to the backends.</small>
     </div>
   </div>
   <div class="flow-step">
@@ -453,7 +453,7 @@ flowchart LR
 flowchart TD
     subgraph Host["Docker Host"]
         direction LR
-        N["Nginx Container<br/>:80 → :8080"]
+        N["Caddy Container<br/>:80, :443"]
         C["ChallengesBackend Container<br/>.NET 8 :8080"]
         S["SolverBackend Container<br/>.NET 8 :8080"]
     end
