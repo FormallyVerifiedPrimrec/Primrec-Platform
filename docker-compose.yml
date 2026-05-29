@@ -1,0 +1,45 @@
+services:
+  frontend:
+    build:
+      context: ./primrec-frontend
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_CHALLENGES_API_URL: ${VITE_CHALLENGES_API_URL:-/api}
+    depends_on:
+      - challenges-backend
+      - solver-backend
+    ports:
+      - "8080:80"
+    networks:
+      - primrec-net
+
+  challenges-backend:
+    build:
+      context: ./primrec-backend
+      dockerfile: Dockerfile.ChallengesBackend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+    networks:
+      - primrec-net
+    # Optional: expose for debugging
+    # ports:
+    #   - "5186:8080"
+
+  solver-backend:
+    build:
+      context: ./primrec-backend
+      dockerfile: Dockerfile.SolverBackend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+    networks:
+      - primrec-net
+    # Optional: expose for debugging
+    # ports:
+    #   - "5187:8080"
+
+networks:
+  primrec-net:
+    driver: bridge
