@@ -1,6 +1,8 @@
 [submodule "primrec-frontend"]
 	path = primrec-frontend
 	url = https://github.com/FormallyVerifiedPrimrec/primrec-frontend.git
+	branch = main
 [submodule "primrec-backend"]
 	path = primrec-backend
 	url = https://github.com/FormallyVerifiedPrimrec/primrec-backend.git
+	branch = main
