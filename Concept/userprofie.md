@@ -47,12 +47,15 @@ ADD COLUMN IF NOT EXISTS solved_at TIMESTAMPTZ DEFAULT now();
   - Image picker uses a hidden `<canvas>` to downscale uploaded images to a max resolution (e.g., 200x200px).
   - Converts the canvas result to a JPEG data URI with 0.7 quality to ensure the string is small.
 
-### 2. The "Community" Tab in Editor
-- **Visibility:** Only visible if the challenge is solved.
-- **Solution Feed:** 
-  - **Pinned Solution:** The creator's suggested solution is always shown at the top with a "Creator" badge.
-  - **Pagination:** Uses an intersection observer or "Load More" button to fetch the next 20 solutions.
-  - **Viewer:** Solutions open in a read-only Monaco editor.
+### 2. Community Solutions in Challenge Overview
+- **Location:** Integrated into the **Challenge Details / Overview** (the view that shows the full description).
+- **Visibility:** Only accessible once the challenge is solved.
+- **Page-by-Page Navigation:** 
+  - Instead of a long scroll, solutions are presented one-at-a-time or in small groups (e.g., 1 solution per page).
+  - Use "Previous" and "Next" buttons (or a horizontal slider) to navigate through the solutions.
+  - This allows the user to focus on one implementation at a time without getting overwhelmed.
+- **Pinned Start:** Page 1 is always the **Creator's Suggested Solution** with a special badge.
+- **Viewer:** Solutions are displayed in a simple, syntax-highlighted `<pre>` code block.
 
 ---
 
