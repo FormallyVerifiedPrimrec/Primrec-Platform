@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PrimRec Platform — Architecture</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --danger: #f85149;
+    --warning: #d2991d;
+    --purple: #bc8cff;
+    --orange: #f0883e;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font: 15px/1.6 system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 40px 24px 100px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 32px; color: #fff; margin-bottom: 8px; }
+  h2 {
+    font-size: 22px; color: #fff; margin: 48px 0 16px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 17px; color: var(--accent); margin: 24px 0 10px; }
+  p, li { color: var(--text); margin-bottom: 8px; }
+  ul { padding-left: 20px; }
+  a { color: var(--accent); }
+  code {
+    font: 13px ui-monospace, Consolas, monospace;
+    background: var(--surface); padding: 2px 6px;
+    border-radius: 4px; border: 1px solid var(--border);
+  }
+  pre {
+    font: 13px ui-monospace, Consolas, monospace;
+    background: var(--surface); padding: 16px;
+    border-radius: 8px; border: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .mermaid {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 16px 0;
+    text-align: center;
+  }
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 10px;
+    font-size: 12px; font-weight: 600; margin: 0 4px 4px 0;
+  }
+  .badge-react { background: rgba(88,166,255,.15); color: var(--accent); }
+  .badge-dotnet { background: rgba(188,140,255,.15); color: var(--purple); }
+  .badge-pg { background: rgba(63,185,80,.15); color: var(--accent2); }
+  .badge-nginx { background: rgba(240,136,62,.15); color: var(--orange); }
+  .badge-docker { background: rgba(88,166,255,.15); color: var(--accent); }
+  .badge-ts { background: rgba(49,120,198,.2); color: #3178c6; }
+  .card-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px; margin: 16px 0;
+  }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 20px;
+  }
+  .card h4 { color: #fff; margin-bottom: 8px; font-size: 15px; }
+  .card p { font-size: 13px; color: var(--text-muted); }
+  .flow-step {
+    display: flex; align-items: center; gap: 12px; padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .flow-step:last-child { border-bottom: none; }
+  .flow-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+  }
+  .endpoint-list {
+    display: grid; grid-template-columns: auto 1fr auto;
+    gap: 8px 20px; margin: 12px 0;
+  }
+  .endpoint-list .method {
+    font-weight: 700; font-size: 12px; padding: 2px 8px;
+    border-radius: 4px; color: #fff;
+  }
+  .method-get { background: #238636; }
+  .method-post { background: #1f6feb; }
+  .endpoint-list .path { font-family: ui-monospace, monospace; font-size: 13px; }
+  .endpoint-list .desc { color: var(--text-muted); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>PrimRec Platform</h1>
+<p>
+  A full-stack web application for writing, verifying, and sharing
+  <strong>primitive recursive functions</strong>.
+  Users solve programming challenges, submit verified solutions,
+  vote on community challenges, and compete on a ranked leaderboard.
+</p>
+<p>
+  <span class="badge badge-react">React 19</span>
+  <span class="badge badge-ts">TypeScript</span>
+  <span class="badge badge-dotnet">.NET 8</span>
+  <span class="badge badge-pg">PostgreSQL</span>
+  <span class="badge badge-nginx">Nginx</span>
+  <span class="badge badge-docker">Docker</span>
+</p>
+
+<h2>System Overview</h2>
+
+<div class="mermaid">
+graph TB
+    subgraph Browser["Browser"]
+        FE["React SPA<br/>Vite + Monaco"]
+    end
+
+    subgraph Docker["Docker Compose"]
+        NGINX["Nginx :80<br/>SPA fallback + reverse proxy"]
+        CB["ChallengesBackend<br/>.NET 8 Minimal API<br/>:8080 (internal)"]
+        SB["SolverBackend<br/>.NET 8<br/>:8080 (internal)"]
+    end
+
+    subgraph Supabase["Supabase Cloud"]
+        PG[("PostgreSQL<br/>challenges, user_interactions,<br/>profiles tables")]
+        AUTH["Supabase Auth<br/>JWT + Row Level Security"]
+    end
+
+    Browser -->|"HTTP :8080"| NGINX
+    NGINX -->|"/api/*"| CB
+    NGINX -->|"/solver/*"| SB
+    NGINX -->|"static assets"| NGINX
+    CB -->|"REST API (Bearer JWT)"| PG
+    CB -->|"auth/v1/user"| AUTH
+    FE -->|"supabase-js"| AUTH
+</div>
+
+<h2>Request Flow</h2>
+
+<div class="card" style="margin: 16px 0;">
+  <div class="flow-step">
+    <span class="flow-num">1</span>
+    <div>
+      <strong>Browser loads SPA</strong><br>
+      <small class="text-muted">Nginx serves <code>index.html</code>. React Router handles client-side routing.</small>
+    </div>
+  </div>
+  <div class="flow-step">
+    <span class="flow-num">2</span>
+    <div>
+      <strong>Supabase Auth</strong><br>
+      <small class="text-muted">User logs in via Supabase. JWT stored in browser. <code>AuthContext</code> provides session state.</small>
+    </div>
+  </div>
+  <div class="flow-step">
+    <span class="flow-num">3</span>
+    <div>
+      <strong>API calls</strong><br>
+      <small class="text-muted">Frontend <code>challengesApi.ts</code> injects JWT via <code>Authorization: Bearer</code>. Nginx proxies <code>/api/*</code> to ChallengesBackend.</small>
+    </div>
+  </div>
+  <div class="flow-step">
+    <span class="flow-num">4</span>
+    <div>
+      <strong>Backend processing</strong><br>
+      <small class="text-muted"><code>IEndpointFilter</code> extracts token. <code>ChallengesService</code> resolves user ID via <code>auth/v1/user</code>, queries Supabase REST API.</small>
+    </div>
+  </div>
+  <div class="flow-step">
+    <span class="flow-num">5</span>
+    <div>
+      <strong>Database interaction</strong><br>
+      <small class="text-muted">PostgREST API with Row Level Security. Triggers recompute <code>votes</code> on <code>challenges</code> from <code>user_interactions</code>.</small>
+    </div>
+  </div>
+</div>
+
+<h2>Frontend Architecture</h2>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>Routing</h4>
+    <p>React Router v7 with <code>BrowserRouter</code>. Auth-gated routes via <code>ProtectedLayout</code> wrapper. Unauthenticated users redirected to <code>/login</code>.</p>
+  </div>
+  <div class="card">
+    <h4>State Management</h4>
+    <p><code>AuthContext</code> for session. <code>ThemeContext</code> for 12-theme system with OLED toggle. <code>useLocalStorageState</code> for editor content persistence.</p>
+  </div>
+  <div class="card">
+    <h4>Editor</h4>
+    <p>Monaco Editor with custom PrimRec language: Monarch tokenizer, semantic tokens, hover provider, context-aware autocompletion, diagnostic markers.</p>
+  </div>
+  <div class="card">
+    <h4>Theme System</h4>
+    <p>6 hue families × dark/light = 12 themes. Colors generated from base hue. OLED black toggle for dark variants. Persisted in <code>localStorage</code>.</p>
+  </div>
+</div>
+
+<h3>Component Tree</h3>
+
+<div class="mermaid">
+graph TD
+    App["App<br/>BrowserRouter + AuthProvider + ThemeProvider"]
+    App --> AC["AppContent<br/>auth gating"]
+    AC -->|unauth| Auth["Auth<br/>Login / Sign-up"]
+    AC -->|auth| Routes["Routes"]
+    Routes --> PL["ProtectedLayout<br/>header + nav + theme toggle"]
+    PL --> EP["EditorPage<br/>/:id? from URL"]
+    PL --> CP["ChallengesPage"]
+    EP --> AS["AppShell<br/>workspace grid"]
+    AS --> EPane["EditorPane<br/>InsertButtons + Monaco + zoom"]
+    AS --> TS["ToolsSidebar"]
+    TS --> FP["FunctionsPanel<br/>tree-disclosure list"]
+    TS --> RP["RunnerPanel<br/>interactive evaluator"]
+    TS --> VP["VerifyPanel<br/>postcondition tester"]
+    TS -->|isCreating| CCP["CreateChallengePanel<br/>metadata + publish"]
+    TS -->|challenge active| CD["ChallengeDetails"]
+    CP --> DB["Dashboard<br/>tabs: challenges / leaderboard"]
+    DB --> CC["ChallengeCard<br/>▲ votes ▼ + solve"]
+    DB --> LB["Leaderboard<br/>ranked users table"]
+</div>
+
+<h2>Frontend File Map</h2>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>Entry &amp; Routing</h4>
+    <p><code>main.tsx → App.tsx</code></p>
+    <p>Sets up providers, route definitions, auth gating.</p>
+  </div>
+  <div class="card">
+    <h4>API Layer</h4>
+    <p><code>api/challengesApi.ts</code></p>
+    <p>Typed fetch wrapper. Supabase JWT injection. Auth token refresh. Pagination params.</p>
+  </div>
+  <div class="card">
+    <h4>Challenges Feature</h4>
+    <p><code>features/challenges/</code></p>
+    <p>Dashboard, ChallengeCard, voting with optimistic updates, paginated lists, leaderboard with O(1) rank lookup, ranked verification system.</p>
+  </div>
+  <div class="card">
+    <h4>Editor Feature</h4>
+    <p><code>features/editor/</code></p>
+    <p>Monaco integration, function templates, integrity checks, template button toolbar.</p>
+  </div>
+  <div class="card">
+    <h4>Layout</h4>
+    <p><code>features/layout/</code></p>
+    <p>ProtectedLayout (header + nav + theme), AppShell (editor/sidebar grid), EditorPane, ToolsSidebar.</p>
+  </div>
+  <div class="card">
+    <h4>Language Engine</h4>
+    <p><code>primrecLanguage/</code></p>
+    <p>Lexer → Parser → Validator → Interpreter pipeline. Compiles to JS closures with idiom recognition.</p>
+  </div>
+  <div class="card">
+    <h4>Theme System</h4>
+    <p><code>features/themes/</code></p>
+    <p>12 themes, CSS custom properties via <code>document.documentElement.style</code>, localStorage persistence.</p>
+  </div>
+  <div class="card">
+    <h4>Sidebar Panels</h4>
+    <p><code>features/sidebar/</code></p>
+    <p>FunctionsPanel (tree view), RunnerPanel (eval), VerifyPanel (postconditions), CreateChallengePanel.</p>
+  </div>
+</div>
+
+<h2>Backend Architecture</h2>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>API Style</h4>
+    <p>ASP.NET Core 8 Minimal APIs. Endpoints mapped via <code>MapGroup("/api")</code>. CORS enabled. Swagger in dev mode.</p>
+  </div>
+  <div class="card">
+    <h4>Auth Pipeline</h4>
+    <p>Custom <code>IEndpointFilter</code> extracts Bearer token. Service layer resolves user ID via Supabase auth endpoint. RLS enforced at DB level.</p>
+  </div>
+  <div class="card">
+    <h4>Data Access</h4>
+    <p><code>SupabaseHttpClient</code> wraps PostgREST API. Constructs REST URLs, handles JSON serialization, maps rows to DTOs.</p>
+  </div>
+  <div class="card">
+    <h4>Error Handling</h4>
+    <p>Global middleware catches <code>UnauthorizedAccessException</code> → 401, <code>ArgumentException/InvalidOperationException</code> → 400, <code>SupabaseRequestException</code> → 502.</p>
+  </div>
+</div>
+
+<h3>Backend File Map</h3>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>Entry</h4>
+    <p><code>Program.cs</code></p>
+    <p>DI registration, middleware pipeline, CORS, Swagger, health check.</p>
+  </div>
+  <div class="card">
+    <h4>Endpoints</h4>
+    <p><code>Api/ChallengeEndpoints.cs</code></p>
+    <p>6 route handlers. <code>RequireAuth()</code> filter. OpenAPI metadata.</p>
+  </div>
+  <div class="card">
+    <h4>Auth</h4>
+    <p><code>Api/AuthHelpers.cs</code> + <code>Api/AuthEndpointFilter.cs</code></p>
+    <p>Bearer extraction + <code>IEndpointFilter</code> for DRY auth.</p>
+  </div>
+  <div class="card">
+    <h4>Business Logic</h4>
+    <p><code>Features/Challenges/ChallengesService.cs</code></p>
+    <p>CRUD, voting (upsert), submissions, leaderboard, vote-map aggregation, search sanitization.</p>
+  </div>
+  <div class="card">
+    <h4>Models</h4>
+    <p><code>Features/Challenges/Models.cs</code></p>
+    <p>DTOs, request records, internal Supabase rows, <code>VoteType</code> enum.</p>
+  </div>
+  <div class="card">
+    <h4>HTTP Client</h4>
+    <p><code>Supabase/SupabaseHttpClient.cs</code></p>
+    <p>Typed HttpClient. JSON (de)serialization. Error wrapping.</p>
+  </div>
+</div>
+
+<h2>API Endpoints</h2>
+
+<div class="endpoint-list">
+  <span class="method method-get">GET</span>
+  <span class="path">/api/challenges</span>
+  <span class="desc">List challenges (paginated, searchable, sortable)</span>
+
+  <span class="method method-get">GET</span>
+  <span class="path">/api/challenges/{id}</span>
+  <span class="desc">Single challenge with user vote</span>
+
+  <span class="method method-post">POST</span>
+  <span class="path">/api/challenges</span>
+  <span class="desc">Create challenge</span>
+
+  <span class="method method-post">POST</span>
+  <span class="path">/api/challenges/{id}/vote</span>
+  <span class="desc">Vote (-1/0/1) — upserts into user_interactions</span>
+
+  <span class="method method-post">POST</span>
+  <span class="path">/api/challenges/{id}/submission</span>
+  <span class="desc">Save submission result</span>
+
+  <span class="method method-get">GET</span>
+  <span class="path">/api/leaderboard</span>
+  <span class="desc">Ranked users (paginated)</span>
+</div>
+
+<h2>Database Schema</h2>
+
+<div class="mermaid">
+erDiagram
+    challenges {
+        uuid id PK
+        uuid creator_id FK
+        string title
+        string description
+        string template_func
+        string postcondition
+        string suggested_solution
+        int votes "computed by trigger"
+        timestamp created_at
+    }
+    user_interactions {
+        uuid user_id PK "part of composite PK"
+        uuid challenge_id PK "part of composite PK"
+        int vote_type "-1, 0, or 1"
+        bool has_solved
+        string best_submission_source
+    }
+    profiles {
+        uuid id PK "linked to auth.users"
+        string username
+        int rank_points
+    }
+    challenges ||--o{ user_interactions : "has"
+    profiles ||--o{ user_interactions : "interacts"
+    challenges }o--|| profiles : "created by"
+</div>
+
+<p>
+  The <code>challenges.votes</code> column is maintained by a PostgreSQL trigger
+  that recomputes <code>SUM(vote_type)</code> from <code>user_interactions</code>
+  on INSERT / UPDATE / DELETE.
+  Voting uses PostgREST upsert with <code>on_conflict=user_id,challenge_id</code>
+  and <code>resolution=merge-duplicates</code>.
+</p>
+
+<h2>Vote Flow</h2>
+
+<div class="mermaid">
+sequenceDiagram
+    participant U as User
+    participant FE as React Frontend
+    participant BE as ChallengesBackend
+    participant SA as Supabase Auth
+    participant PG as PostgreSQL
+
+    U->>FE: Click ▲ / ▼
+    FE->>FE: Optimistic update<br/>userVote + votes changed locally
+    FE->>BE: POST /api/challenges/{id}/vote<br/>Authorization: Bearer &lt;JWT&gt;<br/>{ voteType: 1 | -1 | 0 }
+    Note over BE: IEndpointFilter extracts token
+    BE->>SA: GET auth/v1/user
+    SA-->>BE: { id: "user-uuid" }
+    BE->>PG: POST /user_interactions<br/>?on_conflict=user_id,challenge_id<br/>Prefer: resolution=merge-duplicates
+    PG-->>PG: Trigger recomputes<br/>challenges.votes
+    PG-->>BE: 200 OK
+    BE-->>FE: 204 No Content
+    Note over FE: On error: rollback to snapshot
+</div>
+
+<h2>PrimRec Language Pipeline</h2>
+
+<div class="mermaid">
+flowchart LR
+    SRC["Source Code"] --> LEX["Lexer<br/>hand-written tokenizer"]
+    LEX --> PAR["Parser<br/>recursive-descent"]
+    PAR --> AST["Program AST<br/>diagnostics + ranges"]
+    AST --> VAL["Validator<br/>scope, arity, cycles"]
+    VAL --> NORM["Normalizer<br/>to CoreExpression"]
+    NORM --> INT["Interpreter<br/>compile to JS closures"]
+    INT --> RESULT["Evaluation Result"]
+
+    AST --> MONACO["Monaco Markers<br/>diagnostics in editor"]
+    AST --> DISCOVER["Function Discovery<br/>names, arities, params"]
+    DISCOVER --> SIDEBAR["FunctionsPanel"]
+</div>
+
+<p>
+  The interpreter compiles expressions to native JavaScript closures.
+  Three idiom-recognition patterns detect predecessor, constant-after-first-step,
+  and linear recurrence patterns for O(1) closed-form evaluation instead of
+  recursive computation.
+</p>
+
+<h2>Deployment</h2>
+
+<div class="mermaid">
+flowchart TD
+    subgraph Host["Docker Host"]
+        direction LR
+        N["Nginx Container<br/>:80 → :8080"]
+        C["ChallengesBackend Container<br/>.NET 8 :8080"]
+        S["SolverBackend Container<br/>.NET 8 :8080"]
+    end
+
+    subgraph Cloud["Supabase Cloud"]
+        DB[("PostgreSQL")]
+        Auth["JWT Auth"]
+    end
+
+    Client["Browser"] -->|"https"| N
+    N -->|"/api/*"| C
+    N -->|"/solver/*"| S
+    N -->|"static files"| N
+    C -->|"REST API"| DB
+    C -->|"token validation"| Auth
+</div>
+
+<pre># Build and run all services
+docker compose up --build
+
+# Build individual services
+docker compose build frontend
+docker compose build challenges-backend
+docker compose build solver-backend
+
+# Services
+# Frontend:  http://localhost:8080
+# Backend API (internal): http://challenges-backend:8080
+# Swagger (dev): http://localhost:5186/swagger</pre>
+
+<h3>Environment Variables</h3>
+<pre># .env (repository root)
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOi...</pre>
+
+<h2>Key Design Decisions</h2>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>Optimistic Updates</h4>
+    <p>Vote changes are applied instantly in the UI. On API failure the snapshot is restored. Binary-search insertion maintains sort order in O(log n) instead of O(n log n).</p>
+  </div>
+  <div class="card">
+    <h4>Pagination Everywhere</h4>
+    <p>Challenge lists and leaderboards use <code>limit</code>/<code>offset</code> pagination (50 per page). Search is debounced at 300ms. <code>GetVoteMapAsync</code> capped at 100 IDs.</p>
+  </div>
+  <div class="card">
+    <h4>Immutable Color System</h4>
+    <p>All 12 themes generated from a single base hue via programmatic lighten/darken. OLED-black overrides swap background colors. No per-theme CSS duplication.</p>
+  </div>
+  <div class="card">
+    <h4>DB-Enforced Vote Integrity</h4>
+    <p>A PostgreSQL trigger recomputes <code>votes</code> from the <code>user_interactions</code> table. The API only manages interaction rows — vote counts are always consistent.</p>
+  </div>
+</div>
+
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+</script>
+
+</body>
+</html>
