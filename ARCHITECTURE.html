@@ -127,7 +127,7 @@ graph TB
     end
 
     subgraph Docker["Docker Compose"]
-        NGINX["Caddy :80/443<br/>SPA fallback + reverse proxy"]
+        Caddy["Caddy :80/443<br/>SPA fallback + reverse proxy"]
         CB["ChallengesBackend<br/>.NET 8 Minimal API<br/>:8080 (internal)"]
         SB["SolverBackend<br/>.NET 8<br/>:8080 (internal)"]
     end
@@ -137,10 +137,10 @@ graph TB
         AUTH["Supabase Auth<br/>JWT + Row Level Security"]
     end
 
-    Browser -->|"HTTP :8080"| NGINX
-    NGINX -->|"/api/*"| CB
-    NGINX -->|"/solver/*"| SB
-    NGINX -->|"static assets"| NGINX
+    Browser -->|"HTTP :80 / :443"| Caddy
+    Caddy -->|"/api/*"| CB
+    Caddy -->|"/solver/*"| SB
+    Caddy -->|"static assets"| Caddy
     CB -->|"REST API (Bearer JWT)"| PG
     CB -->|"auth/v1/user"| AUTH
     FE -->|"supabase-js"| AUTH
@@ -479,10 +479,9 @@ docker compose build frontend
 docker compose build challenges-backend
 docker compose build solver-backend
 
-# Services
-# Frontend:  http://localhost:8080
+# Frontend:  http://localhost:80
 # Backend API (internal): http://challenges-backend:8080
-# Swagger (dev): http://localhost:5186/swagger</pre>
+# Dev compose: docker compose -f docker-compose.dev.yml up --build</pre>
 
 <h3>Environment Variables</h3>
 <pre># .env (repository root)
