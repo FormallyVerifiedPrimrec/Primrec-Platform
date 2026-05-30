@@ -8,6 +8,8 @@ services:
       VITE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
       VITE_CHALLENGES_API_URL: ${VITE_CHALLENGES_API_URL:-/api}
       VITE_SOLVER_API_URL: ${VITE_SOLVER_API_URL:-/solver}
+    volumes:
+      - caddy-data:/data
     depends_on:
       - challenges-backend
       - solver-backend
@@ -40,3 +42,6 @@ services:
 networks:
   primrec-net:
     driver: bridge
+
+volumes:
+  caddy-data:
